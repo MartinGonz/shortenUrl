@@ -1,16 +1,18 @@
 package com.example.shortUrl.configuration;
 
+
 import com.datastax.oss.driver.api.core.CqlSession;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.cassandra.SessionFactory;
+
 import org.springframework.data.cassandra.config.AbstractCassandraConfiguration;
+import org.springframework.data.cassandra.config.CqlSessionFactoryBean;
 import org.springframework.data.cassandra.config.SchemaAction;
 import org.springframework.data.cassandra.core.CassandraAdminTemplate;
-import org.springframework.data.cassandra.core.cql.session.DefaultSessionFactory;
+
 import org.springframework.data.cassandra.repository.config.EnableCassandraRepositories;
 
 import java.net.InetSocketAddress;
@@ -35,29 +37,63 @@ public class CassandraConfig  extends AbstractCassandraConfiguration {
     @Bean
     @Primary
     public CqlSession cqlSession() {
-        logger.info("========================================================================================");
-        logger.info("========================================================================================");
-        logger.info("Creating CqlSession with contact points: {}, port: {}, local datacenter: {}, keyspace: {}",
+        logger.debug("========================================================================================");
+        logger.debug("========================================================================================");
+        logger.debug("Creating CqlSession with contact points: {}, port: {}, local datacenter: {}, keyspace: {}",
                 contactPoints, port, localDatacenter, keyspaceName);
-        logger.info("========================================================================================");
-        logger.info("========================================================================================");
+        logger.debug("========================================================================================");
+        logger.debug("========================================================================================");
+
         CqlSession session = CqlSession.builder()
                 .addContactPoint(new InetSocketAddress(contactPoints, port))
                 .withLocalDatacenter(localDatacenter)
                 .withKeyspace((keyspaceName))
                 .build();
-        logger.info("==============================RETURNING ==========================================================");
+
+        logger.debug("==================================created==============================================");
 
         return session;
     }
 
+//    @PostConstruct
+//    private void init(CqlSession session) {
+//        logger.debug("========================================================================================");
+//        logger.debug("============= about to create keypsace and table if not exists =========================");
+//        //create keyspace if not exists
+//        session.execute("CREATE KEY SPACE IF NOT EXISTS shorten_urls WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':1};");
+//        //create table if not exists
+//        session.execute("CREATE TABLE IF NOT EXISTS shorten_urls.url_mapping (shortUrl text PRIMARY KEY,longUrl text,userId text,createdDate timestamp,updatedDate timestamp,isEnabled boolean);");
+//        logger.debug("========================================================================================");
+//        logger.debug("==================================created==============================================");
+//    }
+
     @Bean
-    public DefaultSessionFactory sessionFactory(CqlSession cqlSession) {
-        return new DefaultSessionFactory(cqlSession);
+    public CqlSessionFactoryBean sessionFactory() {
+        CqlSessionFactoryBean factory = new CqlSessionFactoryBean();
+        factory.setContactPoints(contactPoints);
+        factory.setPort(port);
+        factory.setLocalDatacenter(localDatacenter);
+        factory.setKeyspaceName(keyspaceName);
+
+        return factory;
+    }
+
+    @Override
+    protected String getContactPoints() {
+        return contactPoints;
+    }
+    @Override
+    protected String getLocalDataCenter() {
+        return localDatacenter;
+    }
+
+    @Override
+    protected int getPort() {
+        return port;
     }
 
     @Bean
-    public CassandraAdminTemplate cassandraTemplate() {
+    public CassandraAdminTemplate cassandraAdminTemplate() {
         return new CassandraAdminTemplate(cqlSession());
     }
 
@@ -67,7 +103,7 @@ public class CassandraConfig  extends AbstractCassandraConfiguration {
     }
     @Override
     public SchemaAction getSchemaAction() {
-        return SchemaAction.NONE;
+        return SchemaAction.CREATE_IF_NOT_EXISTS;
     }
     @Override
     public String[] getEntityBasePackages() {
