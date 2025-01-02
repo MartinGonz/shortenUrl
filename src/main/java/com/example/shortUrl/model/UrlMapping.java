@@ -20,11 +20,16 @@ public class UrlMapping {
 
     private Date createdDate;
 
-    public UrlMapping(String shortUrl, String longUrl, String userId) {
+    private Date updatedDate;
+
+    private boolean isEnabled;
+
+    public UrlMapping(String shortUrl, String longUrl, String userId, boolean isEnabled) {
         this.shortUrl = shortUrl;
         this.longUrl = longUrl;
         this.userId = userId;
         this.createdDate = new Date();
+        this.isEnabled = isEnabled;
     }
 
     public UrlMapping() {
@@ -58,5 +63,21 @@ public class UrlMapping {
 
     public void setCreatedDate(Date createdDate) {
         this.createdDate = createdDate;
+    }
+
+    public Date getUpdatedDate() {
+        return updatedDate;
+    }
+
+    public void setUpdatedDate(Date updatedDate) {
+        this.updatedDate = updatedDate;
+    }
+
+    public boolean getEnabled() {
+        return isEnabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        isEnabled = enabled;
     }
 }

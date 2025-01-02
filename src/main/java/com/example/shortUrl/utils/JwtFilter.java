@@ -9,6 +9,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -20,9 +22,18 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private JwtUtils jwtUtil;
 
+    private final RequestMatcher excludeMatcher = new RegexRequestMatcher("/[a-zA-Z0-9]{7}", null);
+
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+
+        if (excludeMatcher.matches(request)) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         String authorizationHeader = request.getHeader("Authorization");
 
         String username = null;
