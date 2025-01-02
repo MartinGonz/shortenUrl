@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cassandra
+  labels:
+    app: cassandra
+spec:
+  serviceName: cassandra
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cassandra
+  template:
+    metadata:
+      labels:
+        app: cassandra
+    spec:
+      terminationGracePeriodSeconds: 500
+      containers:
+        - name: cassandra
+          image: cassandra:5.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 7000
+              name: intra-node
+            - containerPort: 7001
+              name: tls-intra-node
+            - containerPort: 7199
+              name: jmx
+            - containerPort: 9042
+              name: cql
+          resources:
+            limits:
+              cpu: "500m"
+              memory: 2Gi
+            requests:
+              cpu: "500m"
+              memory: 2Gi
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - nodetool drain
+          env:
+            - name: CASSANDRA_SSL_ENABLED
+              value: "false"
+            - name: CASSANDRA_ENDPOINT_SNITCH
+              value: "GossipingPropertyFileSnitch"
+            - name: CASSANDRA_BROADCAST_RPC_ADDRESS
+              value: "127.0.0.1"
+            - name: CASSANDRA_DNS_CONFIG
+              value: system
+            - name: MAX_HEAP_SIZE
+              value: 512M
+            - name: HEAP_NEWSIZE
+              value: 100M
+            - name: CASSANDRA_SEEDS
+              value: "cassandra-0.cassandra.default.svc.cluster.local"
+            - name: CASSANDRA_CLUSTER_NAME
+              value: "K8Demo"
+            - name: CASSANDRA_RACK
+              value: "Rack1-K8Demo"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: LOGGING_LEVEL
+              value: "DEBUG"
+            - name: LOGGING_LEVEL_COM_DATASAX
+              value: "TRACE"
+            - name: CASSANDRA_LOG_LEVEL
+              value: DEBUG
+            - name: JAVA_OPTS
+              value: " -Dcom.datastax.oss.driver.dse.contact-points=cassandra -Dcom.datastax.oss.driver.dse.port=9042"
+          readinessProbe:
+            tcpSocket:
+              port: 9042
+            initialDelaySeconds: 30
+            timeoutSeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: cassandra-data
+              mountPath: /cassandra_data
+            - name: cassandra-config
+              mountPath: /etc/cassandra-rackdc.properties
+              subPath: cassandra-rackdc.properties
+      volumes:
+        - name: cassandra-config
+          configMap:
+            name: cassandra-config
+        - name: cassandra-hosts
+          configMap:
+            name: cassandra-hosts
+  volumeClaimTemplates:
+    - metadata:
+        name: cassandra-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: fast
+        resources:
+          requests:
+            storage: 1Gi
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: fast
+provisioner: k8s.io/minikube-hostpath
+parameters:
+  type: pd-ssd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: cassandra
+  name: cassandra
+spec:
+  clusterIP: None
+  ports:
+    - port: 9042
+  selector:
+    app: cassandra
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cassandra-config
+  namespace: default
+data:
+  cassandra-rackdc.properties: |
+    dc=datacenter1
+    rack=Rack1-K8Demo
+
