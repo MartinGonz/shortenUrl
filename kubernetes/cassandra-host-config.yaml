@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cassandra-hosts
+data:
+  hosts: |
+    10.244.0.226    cassandra

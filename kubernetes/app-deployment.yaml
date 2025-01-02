@@ -3,27 +3,51 @@ kind: Deployment
 metadata:
   name: short-url-deployment
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
-      app: short-url
+      app: url-shortener
   template:
     metadata:
       labels:
-        app: short-url
+        app: url-shortener
     spec:
       containers:
-        - name: short-url
-          image: your-docker-image:latest
+        - name: url-shortener
+          image: martingonz/url-shortener:latest
           resources:
             limits:
-              memory: "1Gi"
+              memory: "1536Mi"
               cpu: "2"
             requests:
-              memory: "1Gi"
+              memory: "1536Mi"
               cpu: "2"
           env:
             - name: JAVA_OPTS
-              value: "-Xmx1g -Xms1g"
+              value: "-Xmx1536m -Xms1536m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+            - name: CASSANDRA_CONTACT_POINTS
+              value: "cassandra"
+            - name: CASSANDRA_CLUSTER_NAME
+              value: "K8Demo"
+            - name: CASSANDRA_DC
+              value: "dc1"
           ports:
             - containerPort: 8080
+      volumes:
+        - name: cassandra-hosts
+          configMap:
+            name: cassandra-hosts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: short-url-service
+spec:
+  selector:
+    app: url-shortener
+  ports:
+    - protocol: TCP
+      name: http
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer
