@@ -15,6 +15,7 @@ import org.mockito.MockitoAnnotations;
 
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.io.FileNotFoundException;
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
@@ -42,17 +43,17 @@ public class UrlServiceTest {
 
         when(urlRepository.save(any(UrlMapping.class))).thenReturn(null);
 
-        String result = urlService.shorten(longUrl, userId);
+        String result = urlService.shorten(longUrl, userId,true);
 
         assertEquals(7, result.length());
         verify(urlRepository, times(1)).save(any(UrlMapping.class));
     }
 
     @Test
-    public void testGetLongUrl() {
+    public void testGetLongUrl() throws FileNotFoundException {
         String shortUrl = "abc123";
         String longUrl = "http://example.com";
-        UrlMapping urlMapping = new UrlMapping(shortUrl, longUrl, "user123");
+        UrlMapping urlMapping = new UrlMapping(shortUrl, longUrl, "user123",true);
 
         when(urlRepository.findById(shortUrl)).thenReturn(Optional.of(urlMapping));
 
@@ -61,5 +62,18 @@ public class UrlServiceTest {
         assertEquals(longUrl, result);
         verify(urlRepository, times(1)).findById(shortUrl);
     }
+    @Test
+    public void testGetLongUrlNotFound() throws FileNotFoundException {
+        String shortUrl = "abc123";
+
+        when(urlRepository.findById(shortUrl)).thenReturn(Optional.empty());
+
+        String result = urlService.getLongUrl(shortUrl);
+
+        assertEquals(null, result);
+        verify(urlRepository, times(1)).findById(shortUrl);
+    }
+
+
 }
 
